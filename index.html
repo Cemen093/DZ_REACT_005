@@ -52,7 +52,8 @@
                 .then(data => fetch("https://pixabay.com/api/?" + 
                     "key=23798924-17f42c690434b5dec74a9c318" + 
                     "&image_type=photo" + 
-                    "&q=boobs" +
+                    "&q=" + this.state.q +
+                    "&category=" + this.state.category +
                     "&per_page=" + data.totalHits)
                     .then(response => response.json())
                     .then(data => data.hits)
@@ -86,6 +87,7 @@
             }            
 
             handleSubmit(event) {
+                this.getHits();
                 if(event.target.search.value !="")
                     this.setState({q: event.target.search.value})
                 if(event.target.category.value !="")
