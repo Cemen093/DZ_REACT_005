@@ -3,37 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>DZ_REACT_005</title>
-    <style>
-        #app{
-            padding: 30px;
-        }
-        
-        .search{
-            display: flex;
-            justify-content: center;
-            border: 1px double greenyellow;
-        }
-
-        .images{
-            display: flex;
-            justify-content: center;
-            border: 1px double blue;
-            flex-wrap: wrap;
-        }
-        .card{
-            border: 1px double red;
-        }
-
-        .orientation{
-            display: flex;
-            justify-content: center;
-            border: 1px double grey
-        }
-        .span_1{
-            margin-left: 8px;
-            margin-right: 8px;
-        }
-    </style>
+    <link href="style.css" rel="stylesheet"/>
 </head>
 <body>
     <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
@@ -49,17 +19,13 @@
 
     Так же дать возможность указывать какое количество картинок отображать и в каком размере -->
 
-    <!-- Фильтры на количество комментариев и лайков в документации я не нашел, пришлось всю логику самому делать,
-    но подружить её с логикой page в запросе я не смог (получаю Х картинок но фильтр из количество уменьшает). -->
-    <!-- У меня был только вариант сделать запрос на 1 картинку на странице и получать из по одной разными запросами, но чую что это не то. -->
-
     <script type="text/babel">
         class MyComponent extends React.Component{
             constructor(props){
                 super(props);
                 this.state = { hits: [] };
                 this.state.q = "boobs";
-                this.state.category = "people";
+                this.state.category = "";
                 this.state.comments_from = 0;
                 this.state.comments_to = 0;
                 this.state.likes_from = 0;
@@ -67,6 +33,7 @@
                 this.state.page = 1;
                 this.state.per_page = 10;
                 this.state.width = 100;
+                this.state.count_pages = 0;
 
                 this.handleSubmit = this.handleSubmit.bind(this);
             }
@@ -75,26 +42,25 @@
                 this.getHits();
             }
 
-            componentDidUpdate(){
-                this.getHits();
-            }
-
             getHits(){
-                return fetch("https://pixabay.com/api/?" + "key=23798924-17f42c690434b5dec74a9c318" + 
+                fetch("https://pixabay.com/api/?" + 
+                "key=23798924-17f42c690434b5dec74a9c318" + 
                 "&image_type=photo" + 
                 "&q=" + this.state.q +
-                "&category=" + this.state.category +
-                "&page=" + this.state.page + 
-                "&per_page=" + this.state.per_page)
+                "&category=" + this.state.category)
                 .then(response => response.json())
-                .then(data => {
-                    this.setState({hits: data.hits });
-                })
-                .catch(err => console.log(err))
+                .then(data => fetch("https://pixabay.com/api/?" + 
+                    "key=23798924-17f42c690434b5dec74a9c318" + 
+                    "&image_type=photo" + 
+                    "&q=boobs" +
+                    "&per_page=" + data.totalHits)
+                    .then(response => response.json())
+                    .then(data => data.hits)
+                    .then(hits => {this.setState({hits: hits })}))
+                .catch(err => console.log(err));
             }
 
             getImages(){
-                const imgStyle = {width: this.state.width + "px"};
                 let arr = Array();
                 this.state.hits.forEach(hit => {
                     if((hit.likes >= this.state.likes_from && (hit.likes <= this.state.likes_to || this.state.likes_to == 0)) &&
@@ -108,51 +74,69 @@
                                 <label>Likes: {hit.likes}</label>
                                 <br/>
                                 <br/>
-                                <img style={imgStyle} src={hit.previewURL} />
+                                <img style={{width: this.state.width + "px"}} src={hit.previewURL} />
                             </div>)
                     }
                 })
+                this.state.count_pages = Math.floor(arr.length / this.state.per_page) + 1;
+
+                let start = (this.state.page-1)*this.state.per_page;
+                arr = arr.slice(start, start+ this.state.per_page);
                 return arr;
-            }
+            }            
 
             handleSubmit(event) {
+                if(event.target.search.value !="")
+                    this.setState({q: event.target.search.value})
+                if(event.target.category.value !="")
+                    this.setState({category: event.target.category.value})
+                if(event.target.comments_from.value !="")
+                    this.setState({comments_from: event.target.comments_from.value})
+                if(event.target.comments_to.value !="")
+                    this.setState({comments_to: event.target.comments_to.value})
+                if(event.target.likes_from.value !="")
+                    this.setState({likes_from: event.target.likes_from.value})
+                if(event.target.likes_to.value !="")
+                    this.setState({likes_to: event.target.likes_to.value})
+                if(event.target.per_page.value !="")
+                    this.setState({per_page: event.target.per_page.value})
+                if(event.target.width.value !="")
+                    this.setState({width: event.target.width.value})
                 event.preventDefault();
             }
 
             render(){
                 return (
-
                     <div class = "page">
                         <div class="search">
-                            <form  onSubmit={this.handleSubmit}>
-                                <label>Search:
-                                    <input type="text" placeholder="Enter your request" onChange={(event) => this.setState({q: event.target.value})} />
-                                </label>
-                                <br/>
-                                <label>Category
-                                    <input type="text" placeholder="Enter your category" onChange={(event) => this.setState({category: event.target.value})} />
-                                </label>
-                                <br/>
-                                <label>Number of comments
-                                    <input type="text" placeholder="from" onChange={(event) => this.setState({comments_from: event.target.value})} />
-                                    <input type="text" placeholder="to" onChange={(event) => this.setState({comments_to: event.target.value})} />
-                                </label>
-                                <br/>
-                                <label>Number of likes
-                                    <input type="text" placeholder="from" onChange={(event) => this.setState({likes_from: event.target.value})} />
-                                    <input type="text" placeholder="to" onChange={(event) => this.setState({likes_to: event.target.value})} />
-                                </label>
-                                <br/>
-                                <label>Per page:
-                                    <input type="text" placeholder="Enter per page" onChange={(event) => this.setState({per_page: event.target.value})} />
-                                </label>
-                                <br/>
-                                <label>Wight img:
-                                    <input type="text" placeholder="Enter width img" onChange={(event) => this.setState({width: event.target.value})} />
-                                </label>
-                                <br/>
-                                <input type="reset" value="Reset" />
-                                <input type="submit" value="Send" />
+                            <form onSubmit={this.handleSubmit}>
+                            <label>Search:
+                                <input type="text" placeholder="Enter your request" name="search"/>
+                            </label>
+                            <br/>
+                            <label>Category
+                                <input type="text" placeholder="Enter your category" name="category"/>
+                            </label>
+                            <br/>
+                            <label>Number of comments
+                                <input type="text" placeholder="from" name="comments_from"/>
+                                <input type="text" placeholder="to" name="comments_to"/>
+                            </label>
+                            <br/>
+                            <label>Number of likes
+                                <input type="text" placeholder="from" name="likes_from"/>
+                                <input type="text" placeholder="to" name="likes_to"/>
+                            </label>
+                            <br/>
+                            <label>Per page:
+                                <input type="text" placeholder="Enter per page" name="per_page"/>
+                            </label>
+                            <br/>
+                            <label>Wight img:
+                                <input type="text" placeholder="Enter width img" name="width"/>
+                            </label>
+                            <br/>
+                            <input type="submit" value="Send" />
                             </form>
                         </div>
 
@@ -162,10 +146,10 @@
 
                         <div class="orientation">
                             <button class = 'button'
-                                onClick = {() => {this.setState({page: this.state.page - 1});}}> pref </button>
+                                onClick = {() => {if (this.state.page > 1){this.setState({page: this.state.page - 1})}}}> pref </button>
                             <span class="span_1">page: {this.state.page}</span>
                             <button class = 'button'
-                                onClick = {() => {this.setState({page: this.state.page + 1});}}> next </button>
+                                onClick = {() => {if(this.state.page < this.state.count_pages){this.setState({page: this.state.page + 1})}}}> next </button>
                         </div>
                     </div>
                 );
